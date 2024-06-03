@@ -1,7 +1,7 @@
-package com.s20683.wmphs.plc;
+package com.s20683.plc;
 
 
-import com.s20683.wmphs.plc.tools.TrackId;
+import com.s20683.plc.tools.TrackId;
 
 interface MokaSlotClient {
     public TrackId proceedValue(TrackId trackId, int[] extraReads, byte[] extraWrites);

@@ -1,7 +1,7 @@
-package com.s20683.wmphs.config;
+package com.s20683.config;
 
-import com.s20683.wmphs.plc.CameraBase;
-import com.s20683.wmphs.plc.PlcBase;
+import com.s20683.plc.CameraBase;
+import com.s20683.plc.PlcBase;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Random;
 
-@Service
+//@Service
 public class PLCInitializer {
     protected Logger logger = LoggerFactory.getLogger(PLCInitializer.class);
 

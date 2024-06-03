@@ -1,4 +1,4 @@
-package com.s20683.wmphs.plc;
+package com.s20683.plc;
 
 import Moka7.S7;
 import Moka7.S7Client;

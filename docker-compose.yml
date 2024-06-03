@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 services:
   WMPHS:
     container_name: WMPHS
@@ -8,6 +8,13 @@ services:
       - "9090:9090"
     depends_on:
       - postgres-wmphs
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-wmphs:5432/WMPHS
+      SPRING_DATASOURCE_USERNAME: s20683
+      SPRING_DATASOURCE_PASSWORD: s20683
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
     networks:
       - s20683-psql
 #    volumes:
@@ -18,7 +25,7 @@ services:
     container_name: postgres-wmphs
     image: postgres:latest
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: WMPHS
       POSTGRES_USER: s20683
@@ -26,6 +33,10 @@ services:
     ports:
       - "5432:5432"
     restart: always
+    networks:
+      - s20683-psql
+volumes:
+  postgres-data:
 
 networks:
   s20683-psql:

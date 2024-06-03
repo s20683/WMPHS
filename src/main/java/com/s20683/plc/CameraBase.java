@@ -1,8 +1,8 @@
-package com.s20683.wmphs.plc;
+package com.s20683.plc;
 
 
-import com.s20683.wmphs.plc.tools.Barcode;
-import com.s20683.wmphs.plc.tools.TrackId;
+import com.s20683.plc.tools.Barcode;
+import com.s20683.plc.tools.TrackId;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
