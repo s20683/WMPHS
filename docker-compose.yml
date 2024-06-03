@@ -1,0 +1,32 @@
+version: "3"
+services:
+  WMPHS:
+    container_name: WMPHS
+    image: s20683/wmphs:latest
+    pull_policy: always
+    ports:
+      - "9090:9090"
+    depends_on:
+      - postgres-wmphs
+    networks:
+      - s20683-psql
+#    volumes:
+#      - ./web-static:/web-static
+
+
+  postgres-wmphs:
+    container_name: postgres-wmphs
+    image: postgres:latest
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: WMPHS
+      POSTGRES_USER: s20683
+      POSTGRES_PASSWORD: s20683
+    ports:
+      - "5432:5432"
+    restart: always
+
+networks:
+  s20683-psql:
+    driver: bridge
