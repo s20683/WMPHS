@@ -3,12 +3,11 @@ package com.s20683.wmphs.product;
 import com.s20683.wmphs.gui2wmphs.request.ProductDTO;
 import com.s20683.wmphs.tools.QueryTimer;
 import jakarta.annotation.PostConstruct;
+import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +37,26 @@ public class ProductService {
         logger.info("Find All operation for Products executed on {}", timer);
     }
 
+    public Product getProduct(int id) {
+        return products.get(id);
+    }
+    public String removeProduct(int id) {
+        Product productToRemove = products.get(id);
+        if (productToRemove == null) {
+            logger.info("Cannot remove product with id {}, does not exist", id);
+            return "Produkt z id " + id + " nie istnieje";
+        }
+        QueryTimer timer = new QueryTimer();
+        try {
+            productRepository.delete(productToRemove);
+            products.remove(productToRemove.getId());
+            logger.info("Product {} removed from database, executed {}", productToRemove, timer);
+            return "OK";
+        } catch (Exception exception) {
+            logger.warn("Exception while remove product {}", productToRemove, exception);
+            return exception.getMessage();
+        }
+    }
     public List<ProductDTO> getProducts(){
         return products.values().stream().map(Product::toDTO).collect(Collectors.toList());
     }
