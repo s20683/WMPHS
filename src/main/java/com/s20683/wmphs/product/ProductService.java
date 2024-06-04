@@ -2,13 +2,17 @@ package com.s20683.wmphs.product;
 
 import com.s20683.wmphs.gui2wmphs.request.ProductDTO;
 import com.s20683.wmphs.tools.QueryTimer;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -20,6 +24,22 @@ public class ProductService {
 
     public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
+    }
+
+    @PostConstruct
+    public void init(){
+        QueryTimer timer = new QueryTimer();
+        productRepository
+                .findAll()
+                .forEach(product -> {
+                    logger.info("Received from database product {}", product);
+                    products.put(product.getId(), product);
+                });
+        logger.info("Find All operation for Products executed on {}", timer);
+    }
+
+    public List<ProductDTO> getProducts(){
+        return products.values().stream().map(Product::toDTO).collect(Collectors.toList());
     }
 
     public String addProduct(ProductDTO productDTO) {

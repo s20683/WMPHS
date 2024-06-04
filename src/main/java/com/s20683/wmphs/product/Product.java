@@ -1,12 +1,9 @@
 package com.s20683.wmphs.product;
 
-import com.s20683.wmphs.line.Line;
-import com.s20683.wmphs.stock.Stock;
+import com.s20683.wmphs.gui2wmphs.request.ProductDTO;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Set;
 
 @Entity
 @Table(name = "Product")
@@ -33,9 +30,7 @@ public class Product {
     @Column(nullable = false)
     private Integer volume;
 
-    @OneToMany(mappedBy = "product")
-    private Set<Line> lines;
-
-    @OneToMany(mappedBy = "product")
-    private Set<Stock> stocks;
+    public ProductDTO toDTO(){
+        return new ProductDTO(id, name, location, volume);
+    }
 }
