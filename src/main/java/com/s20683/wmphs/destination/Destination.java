@@ -1,12 +1,17 @@
 package com.s20683.wmphs.destination;
 
+import com.s20683.wmphs.gui2wmphs.request.DestinationDTO;
 import com.s20683.wmphs.order.CompletationOrder;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
+@Data
 @Entity
 @Table(name = "Destination")
+@NoArgsConstructor
 public class Destination {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +26,12 @@ public class Destination {
     @Column(nullable = false)
     private Integer target;
 
-    @OneToMany(mappedBy = "destination")
-    private Set<CompletationOrder> orders;
-
+    public Destination(String name, String address, Integer target) {
+        this.name = name;
+        this.address = address;
+        this.target = target;
+    }
+    public DestinationDTO toDTO(){
+        return new DestinationDTO(id, name, address, target);
+    }
 }

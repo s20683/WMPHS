@@ -8,8 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface StockRepository extends JpaRepository<Stock, Integer> {
-
-    @Query(value = "SELECT * FROM stock WHERE product_id = :productId", nativeQuery = true)
-    List<Stock> findAllByProductId(@Param("productId") int productId);
+public interface AllocatedStockRepository extends JpaRepository<AllocatedStock, Integer> {
+    @Query(value = "SELECT * FROM allocated_stock WHERE line_id = :lineId", nativeQuery = true)
+    List<AllocatedStock> findAllByLineId(@Param("lineId") int lineId);
 }

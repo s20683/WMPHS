@@ -1,25 +1,25 @@
 package com.s20683.wmphs.gui2wmphs.request;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import java.time.LocalDate;
 
 @Data
-public class StockDTO {
+public class CompressedStockDTO {
     private int id;
-    private LocalDate expDate;
     private int quantity;
     private int allocatedQuantity;
     private int notAllocatedQuantity;
     private int productId;
     private String productName;
+    private int productVolume;
 
-    public StockDTO(int id, LocalDate expDate, int quantity, int allocatedQuantity,int productId, String productName) {
+    public CompressedStockDTO(int id, int quantity, int allocatedQuantity, int productId, String productName, int productVolume) {
         this.id = id;
-        this.expDate = expDate;
         this.quantity = quantity;
         this.allocatedQuantity = allocatedQuantity;
         this.productId = productId;
         this.productName = productName;
+        this.productVolume = productVolume;
         this.notAllocatedQuantity = quantity - allocatedQuantity;
     }
 }
