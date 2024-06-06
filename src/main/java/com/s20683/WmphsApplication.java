@@ -1,4 +1,4 @@
-package com.s20683.wmphs;
+package com.s20683;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

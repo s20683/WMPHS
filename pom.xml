@@ -68,7 +68,7 @@
                 <version>3.2.1</version>
                 <configuration>
                     <container>
-                        <mainClass>com.s20683.wmphs.WmphsApplication</mainClass>
+                        <mainClass>com.s20683.WmphsApplication</mainClass>
                     </container>
                     <from>
                         <image>eclipse-temurin:17.0.4.1_1-jre</image>
