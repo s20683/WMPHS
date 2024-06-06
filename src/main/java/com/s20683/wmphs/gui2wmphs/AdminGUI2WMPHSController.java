@@ -1,8 +1,6 @@
 package com.s20683.wmphs.gui2wmphs;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.s20683.config.PLCInitializer;
 import com.s20683.wmphs.carrier.Carrier;
 import com.s20683.wmphs.carrier.CarrierService;
 import com.s20683.wmphs.destination.DestinationService;
@@ -12,21 +10,26 @@ import com.s20683.wmphs.line.LineService;
 import com.s20683.wmphs.order.CreateOrderService;
 import com.s20683.wmphs.order.OrderService;
 import com.s20683.wmphs.product.ProductService;
+import com.s20683.wmphs.scheduler.SingleThreadScheduler;
 import com.s20683.wmphs.stock.StockService;
 import com.s20683.wmphs.user.AppUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/gui2wmphs")
-public class Gui2WMPHSController {
-    protected Logger logger = LoggerFactory.getLogger(Gui2WMPHSController.class);
+public class AdminGUI2WMPHSController {
+    protected Logger logger = LoggerFactory.getLogger(AdminGUI2WMPHSController.class);
     @Autowired
     private ProductService productService;
     @Autowired
@@ -43,9 +46,11 @@ public class Gui2WMPHSController {
     private CarrierService carrierService;
     @Autowired
     private LineService lineService;
-    public Gui2WMPHSController(ProductService productService, StockService stockService, DestinationService destinationService, AppUserService userService,
-                               OrderService orderService, CreateOrderService createOrderService, CarrierService carrierService,
-                               LineService lineService) {
+    @Autowired
+    private SingleThreadScheduler scheduler;
+    public AdminGUI2WMPHSController(ProductService productService, StockService stockService, DestinationService destinationService, AppUserService userService,
+                                    OrderService orderService, CreateOrderService createOrderService, CarrierService carrierService,
+                                    LineService lineService, SingleThreadScheduler scheduler) {
         this.productService = productService;
         this.stockService = stockService;
         this.destinationService = destinationService;
@@ -54,6 +59,7 @@ public class Gui2WMPHSController {
         this.createOrderService = createOrderService;
         this.carrierService = carrierService;
         this.lineService = lineService;
+        this.scheduler = scheduler;
     }
 
     //*************** line ************************
@@ -63,24 +69,16 @@ public class Gui2WMPHSController {
         return carrierService.getCarrier(carrierId).getLines().stream().map(Line::toDTO).collect(Collectors.toList());
     }
     @DeleteMapping("/deleteLine/{lineId}")
-    public SimpleResponse deleteLine(@PathVariable int lineId) {
+    public SimpleResponse deleteLine(@PathVariable int lineId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteLine/{}", lineId);
-        String result = lineService.removeLine(lineId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->lineService.removeLine(lineId));
     }
     //*************** /line ************************
     //*************** carrier ************************
     @DeleteMapping("/deleteCarrier/{carrierId}")
-    public SimpleResponse deleteCarrier(@PathVariable int carrierId) {
+    public SimpleResponse deleteCarrier(@PathVariable int carrierId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteCarrier/{}", carrierId);
-        String result = carrierService.removeCarrier(carrierId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->carrierService.removeCarrier(carrierId));
     }
     @GetMapping("/getCarriers/{orderId}")
     public List<CarrierDTO> getCarriers(@PathVariable int orderId) {
@@ -95,39 +93,28 @@ public class Gui2WMPHSController {
         return orderService.getCompletationOrders();
     }
     @PostMapping("/createOrder")
-    public SimpleResponse createOrder(@RequestBody CreateOrderDTO createOrderDTO) throws JsonProcessingException {
+    public SimpleResponse createOrder(@RequestBody CreateOrderDTO createOrderDTO) throws JsonProcessingException, ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /createOrder");
         logger.info("{}", createOrderDTO);
-        try {
-            String result = createOrderService.createOrder(createOrderDTO);
-            if ("OK".equals(result))
-                return SimpleResponse.createSimpleOk();
-            else
-                return new SimpleResponse(false, result);
-        } catch (RuntimeException exception) {
-            return new SimpleResponse(false, exception.getMessage());
-        }
+        return scheduler.proceedRequestWithSingleResponse(()->createOrderService.createOrder(createOrderDTO));
     }
     @DeleteMapping("/deleteOrder/{orderId}")
-    public SimpleResponse deleteOrder(@PathVariable int orderId) {
+    public SimpleResponse deleteOrder(@PathVariable int orderId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteOrder/{}", orderId);
-        String result = orderService.removeOrder(orderId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->orderService.removeOrder(orderId));
+    }
+    @PostMapping("/releaseOrder/{orderId}")
+    public SimpleResponse releaseOrder(@PathVariable int orderId) throws ExecutionException, InterruptedException {
+        logger.info("Proceeding POST request /releaseOrder/{}", orderId);
+        return scheduler.proceedRequestWithSingleResponse(()->orderService.releaseOrderToCompletation(orderId));
     }
     //*************** /order ************************
     //*************** stock ************************
     @PostMapping("/addStock")
-    public SimpleResponse addStock(@RequestBody StockDTO stockDTO) throws JsonProcessingException {
+    public SimpleResponse addStock(@RequestBody StockDTO stockDTO) throws JsonProcessingException, ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /addStock");
         logger.info("{}", stockDTO);
-        String result = stockService.addStock(stockDTO);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->stockService.addStock(stockDTO));
     }
     @GetMapping("/getStocks")
     public List<StockDTO> getStocks(){
@@ -140,34 +127,22 @@ public class Gui2WMPHSController {
         return stockService.getCompressedStocks();
     }
     @DeleteMapping("/deleteStock/{stockId}")
-    public SimpleResponse deleteStock(@PathVariable int stockId) {
+    public SimpleResponse deleteStock(@PathVariable int stockId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteStock/{}", stockId);
-        String result = stockService.removeStock(stockId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->stockService.removeStock(stockId));
     }
     //*************** /stock ************************
     //*************** product ************************
     @DeleteMapping("/deleteProduct/{productId}")
-    public SimpleResponse deleteProduct(@PathVariable int productId) {
+    public SimpleResponse deleteProduct(@PathVariable int productId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteProduct/{}", productId);
-        String result = productService.removeProduct(productId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->productService.removeProduct(productId));
     }
     @PostMapping("/addProduct")
-    public SimpleResponse addProduct(@RequestBody ProductDTO productDTO) throws JsonProcessingException {
+    public SimpleResponse addProduct(@RequestBody ProductDTO productDTO) throws JsonProcessingException, ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /addProduct");
         logger.info("{}", productDTO);
-        String result = productService.addProduct(productDTO);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->productService.addProduct(productDTO));
     }
     @GetMapping("/getProducts")
     public List<ProductDTO> getProducts(){
@@ -182,23 +157,15 @@ public class Gui2WMPHSController {
         return destinationService.getDestinations();
     }
     @PostMapping("/addDestination")
-    public SimpleResponse addDestination(@RequestBody DestinationDTO destinationDTO) throws JsonProcessingException {
+    public SimpleResponse addDestination(@RequestBody DestinationDTO destinationDTO) throws ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /addDestination");
         logger.info("{}", destinationDTO);
-        String result = destinationService.addDestination(destinationDTO);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->destinationService.addDestination(destinationDTO));
     }
     @DeleteMapping("/deleteDestination/{destinationId}")
-    public SimpleResponse deleteDestination(@PathVariable int destinationId) {
+    public SimpleResponse deleteDestination(@PathVariable int destinationId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteDestination/{}", destinationId);
-        String result = destinationService.removeDestination(destinationId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->destinationService.removeDestination(destinationId));
     }
     //*************** /destination ***********************
     //*************** user ***********************
@@ -208,23 +175,27 @@ public class Gui2WMPHSController {
         return userService.getAppUsers();
     }
     @PostMapping("/addUser")
-    public SimpleResponse addUser(@RequestBody AppUserDTO appUserDTO) throws JsonProcessingException {
+    public SimpleResponse addUser(@RequestBody AppUserDTO appUserDTO) throws JsonProcessingException, ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /addUser");
         logger.info("{}", appUserDTO);
-        String result = userService.addAppUser(appUserDTO);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->userService.addAppUser(appUserDTO));
     }
     @DeleteMapping("/deleteUser/{userId}")
-    public SimpleResponse deleteUser(@PathVariable int userId) {
+    public SimpleResponse deleteUser(@PathVariable int userId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteUser/{}", userId);
-        String result = userService.removeUser(userId);
-        if ("OK".equals(result))
-            return SimpleResponse.createSimpleOk();
-        else
-            return new SimpleResponse(false, result);
+        return scheduler.proceedRequestWithSingleResponse(()->userService.removeUser(userId));
     }
     //*************** /user ***********************
+
+    @ExceptionHandler(ExecutionException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public String handleExecutionException(ExecutionException e) {
+        return "Wystąpił błąd podczas przetwarzania zadania: " + e.getMessage();
+    }
+
+    @ExceptionHandler(InterruptedException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public String handleInterruptedException(InterruptedException e) {
+        return "Zadanie zostało przerwane: " + e.getMessage();
+    }
 }

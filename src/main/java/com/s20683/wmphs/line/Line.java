@@ -47,9 +47,12 @@ public class Line {
         this.carrier = carrier;
     }
     public LineDTO toDTO(){
-        return new LineDTO(id, quantity, quantityCompleted, product.getId(),product.getName(), carrier.getId());
+        return new LineDTO(id, quantity, quantityCompleted, product.getId(),product.getName(), product.getLocation(),carrier.getId());
     }
 
+    public int getQuantityToComplete() {
+        return quantity - quantityCompleted;
+    }
     @Override
     public String toString() {
         return "Line{" +

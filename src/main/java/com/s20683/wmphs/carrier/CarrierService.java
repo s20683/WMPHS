@@ -1,14 +1,17 @@
 package com.s20683.wmphs.carrier;
 
 import com.s20683.wmphs.gui2wmphs.request.CarrierDTO;
+import com.s20683.wmphs.gui2wmphs.request.LineDTO;
+import com.s20683.wmphs.line.Line;
 import com.s20683.wmphs.tools.QueryTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
+
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,6 +81,24 @@ public class CarrierService {
     public Carrier getCarrier(int carrierId) {
         return carrierRepository.findById(carrierId).orElse(null);
     }
+    @Transactional
+    public String setCarrierBarcode(int carrierId, String barcode) {
+        try {
+            Optional<Carrier> carrierFromDB = carrierRepository.findById(carrierId);
+            if (carrierFromDB.isPresent()) {
+                Carrier carrier = carrierFromDB.get();
+                carrier.setBarcode(barcode);
+                QueryTimer timer = new QueryTimer();
+                carrierRepository.save(carrier);
+                logger.info("Set barcode {} to carrier {}, executed in {}", barcode, carrier, timer);
+                return "OK";
+            }
+        } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage());
+        }
+        logger.info("Carrier with id {} does not exist!", carrierId);
+        return "Pojemnik o id " + carrierId + " nie istnieje!";
+    }
 
     @Transactional
     public String removeCarrier(int carrierId) {
@@ -101,5 +122,30 @@ public class CarrierService {
 //        }
 //        logger.info("Carrier with id {} does not exist, cannot delete from database", carrierId);
 //        return "Pojemnik o podanym id " + carrierId + " nie istnieje!";
+    }
+    public List<LineDTO> getPriorityLineForCarriers(List<Integer> carriersID) {
+        List<Carrier> carriers = carrierRepository.findAllById(carriersID);
+        if (carriers.isEmpty()) {
+            logger.info("Carriers with ids {} does not exist", carriersID);
+            return new ArrayList<>();
+        }
+        List<Line> allLines = carriers.stream()
+                .flatMap(carrier -> carrier.getLines().stream())
+                .filter(line -> line.getQuantityToComplete() != 0)
+                .toList();
+
+        if (allLines.isEmpty()) {
+            logger.info("No lines found for carriers with ids {}", carriersID);
+            return new ArrayList<>();
+        }
+        String firstLocation = allLines.stream()
+                .map(line -> line.getProduct().getLocation())
+                .min(String::compareTo)
+                .orElseThrow(() -> new RuntimeException("Unexpected empty stream"));
+
+        return allLines.stream()
+                .filter(line -> firstLocation.equals(line.getProduct().getLocation()))
+                .map(Line::toDTO)
+                .toList();
     }
 }

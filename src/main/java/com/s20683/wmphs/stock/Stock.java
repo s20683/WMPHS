@@ -51,6 +51,11 @@ public class Stock {
     public StockDTO toDTO(){
         return new StockDTO(id, expDate.toLocalDate(), quantity, allocatedQuantity, product.getId(), product.getName());
     }
+    public void completeQuantity(int quantity) {
+        allocatedQuantity -= quantity;
+        this.quantity -= quantity;
+    }
+
     public int getAvailableQuantity(){
         return quantity - allocatedQuantity;
     }

@@ -4,11 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppUserDTO {
-    private int id;
-    private String name;
-    private String processMessage;
+public class CarriersIdDTO {
+    private List<Integer> carriersId;
 }

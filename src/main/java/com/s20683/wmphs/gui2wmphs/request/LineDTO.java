@@ -13,5 +13,6 @@ public class LineDTO {
     private int quantityCompleted;
     private int productId;
     private String productName;
+    private String productLocation;
     private int carrierId;
 }

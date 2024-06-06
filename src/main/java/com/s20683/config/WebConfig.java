@@ -11,6 +11,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/admin").setViewName("forward:/admin/index.html");
+        registry.addViewController("/picking").setViewName("forward:/picking/index.html");
     }
 
     @Override
@@ -19,5 +20,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:/app/admin-static/");
         registry.addResourceHandler("/admin/static/**")
                 .addResourceLocations("file:/app/admin-static/static/");
+
+        registry.addResourceHandler("/picking/**")
+                .addResourceLocations("file:/app/picking-static/");
+        registry.addResourceHandler("/picking/static/**")
+                .addResourceLocations("file:/app/picking-static/static/");
     }
 }

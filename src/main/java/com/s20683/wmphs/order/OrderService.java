@@ -1,9 +1,13 @@
 package com.s20683.wmphs.order;
 
+import com.s20683.wmphs.carrier.Carrier;
 import com.s20683.wmphs.carrier.CarrierService;
 import com.s20683.wmphs.destination.Destination;
 import com.s20683.wmphs.destination.DestinationService;
+import com.s20683.wmphs.gui2wmphs.request.CarrierDTO;
 import com.s20683.wmphs.gui2wmphs.request.CompletationOrderDTO;
+import com.s20683.wmphs.gui2wmphs.request.CompleteLineDTO;
+import com.s20683.wmphs.line.Line;
 import com.s20683.wmphs.line.LineService;
 import com.s20683.wmphs.tools.QueryTimer;
 import com.s20683.wmphs.user.AppUser;
@@ -12,6 +16,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -61,12 +69,95 @@ public class OrderService {
 //                });
 //        logger.info("Find All operation for Orders executed on {}", timer);
 //    }
+
+    @Transactional
+    public List<CarrierDTO> getCarriersToCompletation(int orderId) {
+        Optional<CompletationOrder> orderFromDB = orderRepository.findById(orderId);
+        if (orderFromDB.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Carrier> carriers = orderFromDB.get().getCarriers();
+        carriers = carriers.stream()
+                .filter(carrier -> carrier.getLines().stream()
+                        .anyMatch(line -> line.getQuantityToComplete() != 0))
+                .sorted(Comparator.comparing(Carrier::getId))
+                .limit(6)
+                .collect(Collectors.toList());
+        return carriers.stream().map(Carrier::toDTO).toList();
+    }
+    @Transactional
+    public CompletationOrderDTO getReleasedOrderForUser(int userId) {
+        try {
+            CompletationOrder releasedOrder = null;
+            Optional<CompletationOrder> releasedOrderFromDB = orderRepository.findOrderInCompletationPerUser(userId);
+            if (releasedOrderFromDB.isPresent()) {
+                releasedOrder = releasedOrderFromDB.get();
+                return releasedOrder.toDTO();
+            } else {
+                List<CompletationOrder> releasedOrders = orderRepository.findReleasedToCompletationOrdersPerUser(userId);
+                if (releasedOrders.isEmpty()) {
+                    return null;
+                }
+                releasedOrder = releasedOrders.get(0);
+                releasedOrder.setState(OrderState.COMPLETATION.getValue());
+                orderRepository.save(releasedOrder);
+                return releasedOrder.toDTO();
+            }
+        } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage());
+        }
+    }
+    public String releaseOrderToCompletation(int orderId) {
+        Optional<CompletationOrder> orderFromDB = orderRepository.findById(orderId);
+        if (orderFromDB.isPresent()) {
+            CompletationOrder order = orderFromDB.get();
+            if (order.getCarriers().isEmpty()) {
+                logger.info("Cannot release order {} with empty carriers!", order);
+                return "Nie można uwolnić zlecenia bez pojemników!";
+            }
+            for (Carrier carrier : order.getCarriers()) {
+                if (carrier.getLines().isEmpty()) {
+                    logger.info("Cannot release order {} with empty lines for carrier {}", order, carrier);
+                    return "Nie można uwolnić zlecenia z pusto zaplanowanym pojemnikiem " + carrier.getId();
+                }
+            }
+            if (order.getState() != OrderState.INIT.getValue()) {
+                logger.info("Cannot release order {} with state {}", order, order.getState());
+                return "Nie można uwolnić zlecenia w stanie " + order.getState();
+            }
+            order.setState(OrderState.RELEASED.getValue());
+            orderRepository.save(order);
+            logger.info("Order {} released successfully!", order);
+            return "Zlecenie uwolniono do kompletacji!";
+        }
+        return "Zlecenie z id " + orderId + " nie istnieje!";
+    }
     public CompletationOrder getOrder(int orderId) {
         Optional<CompletationOrder> order = orderRepository.findById(orderId);
         return order.orElse(null);
     }
     public List<CompletationOrderDTO> getCompletationOrders(){
         return orderRepository.findAll().stream().map(CompletationOrder::toDTO).collect(Collectors.toList());
+    }
+    public void checkOrderCompleted(CompleteLineDTO completeLineDTO) throws RuntimeException{
+        Optional<CompletationOrder> orderFromDB = orderRepository.findById(completeLineDTO.getOrderId());
+
+        if (orderFromDB.isEmpty()) {
+            logger.info("Cannot complete order {}, does not exist", completeLineDTO.getOrderId());
+            throw new RuntimeException("Order not exist");
+        }
+        CompletationOrder order = orderFromDB.get();
+        boolean allLinesComplete = order.getCarriers().stream()
+                .flatMap(carrier -> carrier.getLines().stream())
+                .allMatch(line -> line.getQuantityToComplete() == 0);
+
+        if (allLinesComplete) {
+            order.setState(OrderState.COMPLETED.getValue());
+            orderRepository.save(order);
+            logger.info("Order {} completed database", order);
+        } else {
+            logger.info("Order has incompleted lines!");
+        }
     }
 
     public String addOrder(CompletationOrderDTO completationOrderDTO) {

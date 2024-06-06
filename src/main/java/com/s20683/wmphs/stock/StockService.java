@@ -138,6 +138,23 @@ public class StockService {
         }
     }
     @Transactional
+    public void completeLine(Line line) throws Exception {
+        List<AllocatedStock> allocatedStocks = allocatedStockRepository.findAllByLineId(line.getId());
+
+        for (AllocatedStock allocatedStock : allocatedStocks) {
+            Stock stock = allocatedStock.getStock();
+            stock.completeQuantity(line.getQuantityCompleted());
+
+            allocatedStockRepository.delete(allocatedStock);
+
+            if (stock.getQuantity() == 0) {
+                stockRepository.delete(stock);
+            } else {
+                stockRepository.save(stock);
+            }
+        }
+    }
+    @Transactional
     public void allocateStock(Line line) throws Exception {
         try {
             List<Stock> stocks = stockRepository.findAllByProductId(line.getProduct().getId())
