@@ -53,6 +53,7 @@ public class AppUserService {
         } else {
             QueryTimer timer = new QueryTimer();
             user.setName(appUserDTO.getName());
+            appUserRepository.save(user);
             logger.info("User {} updated on database, executed in {}", user, timer);
             users.put(user.getId(), user);
             return "OK";

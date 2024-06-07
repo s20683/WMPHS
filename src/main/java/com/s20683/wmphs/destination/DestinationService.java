@@ -60,6 +60,7 @@ public class DestinationService {
             destination.setName(destinationDTO.getName());
             destination.setAddress(destinationDTO.getAddress());
             destination.setTarget(destinationDTO.getTarget());
+            destinationRepository.save(destination);
             logger.info("Destination {} updated on database, executed in {}", destination, timer);
             destinations.put(destination.getId(), destination);
             return "OK";
