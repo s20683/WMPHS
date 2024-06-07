@@ -80,7 +80,7 @@ public class ProductService {
             product.setName(productDTO.getName());
             product.setLocation(productDTO.getLocation());
             product.setVolume(productDTO.getVolume());
-            product = productRepository.save(product);
+            productRepository.save(product);
             logger.info("Product {} updated on database, executed in {}", product, timer);
             products.put(product.getId(), product);
             return "OK";
