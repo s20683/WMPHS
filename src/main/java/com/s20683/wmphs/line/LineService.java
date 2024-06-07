@@ -1,76 +1,103 @@
 package com.s20683.wmphs.line;
 
-import com.s20683.wmphs.gui2wmphs.request.LineDTO;
-import com.s20683.wmphs.stock.StockService;
+import com.s20683.wmphs.carrier.Carrier;
+import com.s20683.wmphs.carrier.CarrierService;
+import com.s20683.wmphs.product.Product;
+import com.s20683.wmphs.product.ProductService;
 import com.s20683.wmphs.tools.QueryTimer;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class LineService {
     protected final Logger logger = LoggerFactory.getLogger(LineService.class);
     private final LineRepository lineRepository;
-    private final StockService stockService;
-//    private final Map<Integer, Line> lines = new HashMap<>();
+    private final Map<Integer, Line> lines = new HashMap<>();
+    @Autowired
+    private final CarrierService carrierService;
+    @Autowired
+    private final ProductService productService;
 
-    public LineService(LineRepository lineRepository, StockService stockService) {
+    public LineService(LineRepository lineRepository, CarrierService carrierService, ProductService productService) {
         this.lineRepository = lineRepository;
-        this.stockService = stockService;
+        this.carrierService = carrierService;
+        this.productService = productService;
     }
 
-//    @PostConstruct
-//    public void init(){
-//        QueryTimer timer = new QueryTimer();
-//        lineRepository
-//                .findAll()
-//                .forEach(line -> {
-//                    logger.info("Received from database line {}", line);
-//                    lines.put(line.getId(), line);
-//                });
-//        logger.info("Find All operation for Lines executed on {}", timer);
-//    }
-
-    public List<LineDTO> getLines() {
-        return lineRepository.findAll().stream().map(Line::toDTO).collect(Collectors.toList());
+    @PostConstruct
+    public void init(){
+        QueryTimer timer = new QueryTimer();
+        lineRepository
+                .findAll()
+                .forEach(line -> {
+                    logger.info("Received from database line {}", line);
+                    lines.put(line.getId(), line);
+                    Carrier carrier = carrierService.getCarrierById(line.getCarrierId());
+                    carrier.addLine(line);
+                    line.setCarrier(carrier);
+                    Product product = productService.getProductById(line.getProductId());
+                    line.setProduct(product);
+                });
+        logger.info("Find All operation for Lines executed on {}", timer);
     }
+
+    public Line getLineById(int id) {
+        return lines.get(id);
+    }
+    public String deleteLine(int id) {
+        Line lineToRemove = lines.get(id);
+        if (lineToRemove == null) {
+            logger.info("Cannot remove line with id {}, does not exist", id);
+            return "Linia z id " + id + " nie istnieje";
+        }
+        QueryTimer timer = new QueryTimer();
+        try {
+            lineRepository.deleteById(id);
+            lines.remove(lineToRemove.getId());
+            lineToRemove.getCarrier().removeLine(lineToRemove);
+            logger.info("Line {} removed from database, executed {}", id, timer);
+            return "OK";
+        } catch (Exception exception) {
+            logger.warn("Exception while removing line {}", id, exception);
+            return exception.getMessage();
+        }
+    }
+    public void updateLineOnDB(Line line) {
+        lineRepository.save(line);
+    }
+
     public void addLineToMap(Line line) {
-//        if (line != null && line.getId() != null) {
-//            lines.put(line.getId(), line);
-//        }
+        if (line != null)
+            lines.put(line.getId(), line);
     }
 
-    @Transactional
-    public String removeLine(int id) {
+//    @Transactional
+//    public String removeLine(int id) {
 //        Line line = lines.get(id);
 //        if (line != null) {
-        try {
-            QueryTimer timer = new QueryTimer();
-            Optional<Line> lineFromDB = lineRepository.findById(id);
-            if (lineFromDB.isPresent()) {
-                Line line = lineFromDB.get();
-                stockService.unallocateStock(line);
-                lineRepository.deleteById(id);
-                logger.info("Removed line and updated stock {} on database, executed {}", id, timer);
-//            line.getCarrier().removeLine(line);
-//            lines.remove(line.getId());
-                return "OK";
-            } else {
-                logger.info("Cannot remove line {} on database, line not exist", id);
-                return "Nie można usunąć linii ponieważ nie istnieje!";
-            }
-
-        } catch (Exception exception) {
-            logger.warn("Exception while remove line {}", id, exception);
-            return "Błąd podczas usuwania linii: " + exception.getMessage();
-        }
+//            try {
+//                QueryTimer timer = new QueryTimer();
+//
+//                stockService.unallocateStock(line);
+//                lineRepository.deleteById(id);
+//                logger.info("Removed line and updated stock {} on database, executed {}", id, timer);
+////            line.getCarrier().removeLine(line);
+////            lines.remove(line.getId());
+//                return "OK";
+//
+//
+//            } catch (Exception exception) {
+//                logger.warn("Exception while remove line {}", id, exception);
+//                return "Błąd podczas usuwania linii: " + exception.getMessage();
+//            }
 //        }
 //        logger.info("Line with id {} does not exist, cannot delete from database", id);
 //        return "Linia o podanym id " + id +  " nie istnieje!";
-    }
+//    }
 
 //    public String addLine(LineDTO lineDTO) {
 //        Line line = lines.get(lineDTO.getId());

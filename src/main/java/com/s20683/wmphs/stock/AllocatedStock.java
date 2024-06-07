@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.sql.Date;
 
 @Entity
@@ -13,7 +12,7 @@ import java.sql.Date;
 @Setter
 @Getter
 @NoArgsConstructor
-public class AllocatedStock {
+public class AllocatedStock implements Comparable<AllocatedStock> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -24,19 +23,35 @@ public class AllocatedStock {
     @Column(name = "exp_date", nullable = false)
     private java.sql.Date expDate;
 
-    @ManyToOne()
-    @JoinColumn(name = "stock_id", nullable = false)
+    @Column(name = "stock_id", nullable = false)
+    private Integer stockId;
+
+    @Transient
     private Stock stock;
 
-    @ManyToOne()
-    @JoinColumn(name = "line_id", nullable = false)
+    @Column(name = "line_id", nullable = false)
+    private Integer lineId;
+
+    @Transient
     private Line line;
 
     public AllocatedStock(Integer quantity, Date expDate, Stock stock, Line line) {
         this.quantity = quantity;
         this.expDate = expDate;
         this.stock = stock;
+        this.stockId = stock.getId();
         this.line = line;
+        this.lineId = line.getId();
+    }
+
+    public void setStock(Stock stock) {
+        this.stock = stock;
+        this.stockId = stock.getId();
+    }
+
+    public void setLine(Line line) {
+        this.line = line;
+        this.lineId = line.getId();
     }
 
     @Override
@@ -45,8 +60,11 @@ public class AllocatedStock {
                 "id=" + id +
                 ", quantity=" + quantity +
                 ", expDate=" + expDate +
-                ", stock=" + stock.getId() +
-                ", line=" + line.getId() +
                 '}';
+    }
+
+    @Override
+    public int compareTo(AllocatedStock o) {
+        return this.expDate.compareTo(o.getExpDate());
     }
 }

@@ -11,6 +11,7 @@ import com.s20683.wmphs.order.CreateOrderService;
 import com.s20683.wmphs.order.OrderService;
 import com.s20683.wmphs.product.ProductService;
 import com.s20683.wmphs.scheduler.SingleThreadScheduler;
+import com.s20683.wmphs.stock.AllocatedStockService;
 import com.s20683.wmphs.stock.StockService;
 import com.s20683.wmphs.user.AppUserService;
 import org.slf4j.Logger;
@@ -20,10 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @RestController
@@ -47,10 +45,12 @@ public class AdminGUI2WMPHSController {
     @Autowired
     private LineService lineService;
     @Autowired
+    private AllocatedStockService allocatedStockService;
+    @Autowired
     private SingleThreadScheduler scheduler;
     public AdminGUI2WMPHSController(ProductService productService, StockService stockService, DestinationService destinationService, AppUserService userService,
                                     OrderService orderService, CreateOrderService createOrderService, CarrierService carrierService,
-                                    LineService lineService, SingleThreadScheduler scheduler) {
+                                    LineService lineService, SingleThreadScheduler scheduler, AllocatedStockService allocatedStockService) {
         this.productService = productService;
         this.stockService = stockService;
         this.destinationService = destinationService;
@@ -60,18 +60,18 @@ public class AdminGUI2WMPHSController {
         this.carrierService = carrierService;
         this.lineService = lineService;
         this.scheduler = scheduler;
+        this.allocatedStockService = allocatedStockService;
     }
 
     //*************** line ************************
     @GetMapping("/getLines/{carrierId}")
     public List<LineDTO> getLines(@PathVariable int carrierId) {
-        logger.info("Proceeding GET request /getLines/{}", carrierId);
         return carrierService.getCarrier(carrierId).getLines().stream().map(Line::toDTO).collect(Collectors.toList());
     }
     @DeleteMapping("/deleteLine/{lineId}")
     public SimpleResponse deleteLine(@PathVariable int lineId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteLine/{}", lineId);
-        return scheduler.proceedRequestWithSingleResponse(()->lineService.removeLine(lineId));
+        return scheduler.proceedRequestWithSingleResponse(()->allocatedStockService.removeLine(lineId));
     }
     //*************** /line ************************
     //*************** carrier ************************
@@ -82,14 +82,12 @@ public class AdminGUI2WMPHSController {
     }
     @GetMapping("/getCarriers/{orderId}")
     public List<CarrierDTO> getCarriers(@PathVariable int orderId) {
-        logger.info("Proceeding GET request /getCarriers/{}", orderId);
-        return orderService.getOrder(orderId).getCarriers().stream().map(Carrier::toDTO).toList();
+        return orderService.getOrderById(orderId).getCarriers().stream().map(Carrier::toDTO).toList();
     }
     //*************** /carrier ************************
     //*************** order ************************
     @GetMapping("/getOrders")
     public List<CompletationOrderDTO> getOrders(){
-        logger.info("Proceeding GET request /getOrders");
         return orderService.getCompletationOrders();
     }
     @PostMapping("/createOrder")
@@ -114,22 +112,20 @@ public class AdminGUI2WMPHSController {
     public SimpleResponse addStock(@RequestBody StockDTO stockDTO) throws JsonProcessingException, ExecutionException, InterruptedException {
         logger.info("Proceeding POST request /addStock");
         logger.info("{}", stockDTO);
-        return scheduler.proceedRequestWithSingleResponse(()->stockService.addStock(stockDTO));
+        return scheduler.proceedRequestWithSingleResponse(()->stockService.createStock(stockDTO));
     }
     @GetMapping("/getStocks")
     public List<StockDTO> getStocks(){
-        logger.info("Proceeding GET request /getStocks");
         return stockService.getStocks();
     }
     @GetMapping("/getCompressedStocks")
     public List<CompressedStockDTO> getCompressedStocks(){
-        logger.info("Proceeding GET request /getCompressedStocks");
         return stockService.getCompressedStocks();
     }
     @DeleteMapping("/deleteStock/{stockId}")
     public SimpleResponse deleteStock(@PathVariable int stockId) throws ExecutionException, InterruptedException {
         logger.info("Proceeding DELETE request /deleteStock/{}", stockId);
-        return scheduler.proceedRequestWithSingleResponse(()->stockService.removeStock(stockId));
+        return scheduler.proceedRequestWithSingleResponse(()->allocatedStockService.removeStock(stockId));
     }
     //*************** /stock ************************
     //*************** product ************************
@@ -146,14 +142,12 @@ public class AdminGUI2WMPHSController {
     }
     @GetMapping("/getProducts")
     public List<ProductDTO> getProducts(){
-        logger.info("Proceeding GET request /getProducts");
         return productService.getProducts();
     }
     //*************** /product ***********************
     //*************** destination ***********************
     @GetMapping("/getDestinations")
     public List<DestinationDTO> getDestinations(){
-        logger.info("Proceeding GET request /getDestinations");
         return destinationService.getDestinations();
     }
     @PostMapping("/addDestination")
@@ -171,7 +165,6 @@ public class AdminGUI2WMPHSController {
     //*************** user ***********************
     @GetMapping("/getUsers")
     public List<AppUserDTO> getUsers(){
-        logger.info("Proceeding GET request /getUsers");
         return userService.getAppUsers();
     }
     @PostMapping("/addUser")

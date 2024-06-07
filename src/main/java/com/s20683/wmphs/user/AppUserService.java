@@ -1,6 +1,5 @@
 package com.s20683.wmphs.user;
 
-import com.s20683.wmphs.destination.Destination;
 import com.s20683.wmphs.gui2wmphs.request.AppUserDTO;
 import com.s20683.wmphs.tools.QueryTimer;
 import jakarta.annotation.PostConstruct;
@@ -55,7 +54,6 @@ public class AppUserService {
             user.setName(appUserDTO.getName());
             appUserRepository.save(user);
             logger.info("User {} updated on database, executed in {}", user, timer);
-            users.put(user.getId(), user);
             return "OK";
         }
     }
@@ -79,7 +77,7 @@ public class AppUserService {
     public List<AppUserDTO> getAppUsers() {
         return users.values().stream().map(AppUser::toDTO).collect(Collectors.toList());
     }
-    public AppUser getAppUser(int appUserId){
+    public AppUser getAppUserById(int appUserId){
         return users.get(appUserId);
     }
 }

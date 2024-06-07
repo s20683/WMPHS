@@ -1,27 +1,21 @@
 package com.s20683.wmphs.order;
 
 import com.s20683.wmphs.carrier.Carrier;
-import com.s20683.wmphs.carrier.CarrierService;
 import com.s20683.wmphs.destination.Destination;
 import com.s20683.wmphs.destination.DestinationService;
 import com.s20683.wmphs.gui2wmphs.request.CarrierDTO;
 import com.s20683.wmphs.gui2wmphs.request.CompletationOrderDTO;
 import com.s20683.wmphs.gui2wmphs.request.CompleteLineDTO;
-import com.s20683.wmphs.line.Line;
-import com.s20683.wmphs.line.LineService;
 import com.s20683.wmphs.tools.QueryTimer;
 import com.s20683.wmphs.user.AppUser;
 import com.s20683.wmphs.user.AppUserService;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,71 +28,76 @@ public class OrderService {
     private final DestinationService destinationService;
     @Autowired
     private final AppUserService appUserService;
-    @Autowired
-    private final CarrierService carrierService;
-    @Autowired
-    private final LineService lineService;
-//    private final Map<Integer, CompletationOrder> orders = new HashMap<>();
 
-    public OrderService(OrderRepository orderRepository, DestinationService destinationService, AppUserService appUserService,
-                        CarrierService carrierService, LineService lineService) {
+    private final Map<Integer, CompletationOrder> orders = new HashMap<>();
+
+    public OrderService(OrderRepository orderRepository, DestinationService destinationService, AppUserService appUserService) {
         this.orderRepository = orderRepository;
         this.destinationService = destinationService;
         this.appUserService = appUserService;
-        this.carrierService = carrierService;
-        this.lineService = lineService;
     }
 
-//    @PostConstruct
-//    public void init(){
-//        QueryTimer timer = new QueryTimer();
-//        orderRepository
-//                .findAll()
-//                .forEach(order -> {
-//                    logger.info("Received from database order {}", order);
-////                    orders.put(order.getId(), order);
-//                    order.getCarriers()
-//                            .forEach(carrier -> {
-//                                logger.info("Received from database carrier {}", carrier);
-//                                carrierService.addCarrierToMap(carrier);
-//                                carrier.getLines().forEach(line -> {
-//                                    logger.info("Received from database line {}", line);
-//                                    lineService.addLineToMap(line);
-//                                });
-//                            });
-//                });
-//        logger.info("Find All operation for Orders executed on {}", timer);
-//    }
+    @PostConstruct
+    public void init(){
+        QueryTimer timer = new QueryTimer();
+        orderRepository
+                .findAll()
+                .forEach(order -> {
+                    logger.info("Received from database order {}", order);
+                    orders.put(order.getId(), order);
+                    Destination destination = destinationService.getDestinationById(order.getDestinationId());
+                    order.setDestination(destination);
+                    AppUser user = appUserService.getAppUserById(order.getUserId());
+                    order.setUser(user);
+                });
+        logger.info("Find All operation for Orders executed on {}", timer);
+    }
 
+    public CompletationOrder getOrderById(int id) {
+        return orders.get(id);
+    }
     @Transactional
     public List<CarrierDTO> getCarriersToCompletation(int orderId) {
-        Optional<CompletationOrder> orderFromDB = orderRepository.findById(orderId);
-        if (orderFromDB.isEmpty()) {
+        CompletationOrder order = orders.get(orderId);
+        if (order == null) {
+            logger.info("Order with id {} does not exist", orderId);
             return new ArrayList<>();
         }
-        List<Carrier> carriers = orderFromDB.get().getCarriers();
+        List<Carrier> carriers = order.getCarriers();
+        logger.info("Received carriers {}", carriers);
         carriers = carriers.stream()
                 .filter(carrier -> carrier.getLines().stream()
                         .anyMatch(line -> line.getQuantityToComplete() != 0))
                 .sorted(Comparator.comparing(Carrier::getId))
                 .limit(6)
                 .collect(Collectors.toList());
+        logger.info("Filtered carriers {}", carriers);
+
         return carriers.stream().map(Carrier::toDTO).toList();
     }
     @Transactional
     public CompletationOrderDTO getReleasedOrderForUser(int userId) {
         try {
             CompletationOrder releasedOrder = null;
-            Optional<CompletationOrder> releasedOrderFromDB = orderRepository.findOrderInCompletationPerUser(userId);
-            if (releasedOrderFromDB.isPresent()) {
-                releasedOrder = releasedOrderFromDB.get();
+
+            Optional<CompletationOrder> inProgressOrderFromCache = orders.values().stream()
+                .filter(order -> order.getUser().getId() == userId)
+                    .filter(order -> order.getState() == OrderState.COMPLETATION.getValue())
+                            .findFirst();
+
+            if (inProgressOrderFromCache.isPresent()) {
+                releasedOrder = inProgressOrderFromCache.get();
                 return releasedOrder.toDTO();
             } else {
-                List<CompletationOrder> releasedOrders = orderRepository.findReleasedToCompletationOrdersPerUser(userId);
-                if (releasedOrders.isEmpty()) {
+                Optional<CompletationOrder> releasedOrderFromCache = orders.values().stream()
+                        .filter(order -> order.getUser().getId() == userId)
+                        .filter(order -> order.getState() == OrderState.RELEASED.getValue())
+                        .findFirst();
+                if (releasedOrderFromCache.isEmpty()) {
                     return null;
                 }
-                releasedOrder = releasedOrders.get(0);
+
+                releasedOrder = releasedOrderFromCache.get();
                 releasedOrder.setState(OrderState.COMPLETATION.getValue());
                 orderRepository.save(releasedOrder);
                 return releasedOrder.toDTO();
@@ -108,9 +107,8 @@ public class OrderService {
         }
     }
     public String releaseOrderToCompletation(int orderId) {
-        Optional<CompletationOrder> orderFromDB = orderRepository.findById(orderId);
-        if (orderFromDB.isPresent()) {
-            CompletationOrder order = orderFromDB.get();
+        CompletationOrder order = orders.get(orderId);
+        if (order != null) {
             if (order.getCarriers().isEmpty()) {
                 logger.info("Cannot release order {} with empty carriers!", order);
                 return "Nie można uwolnić zlecenia bez pojemników!";
@@ -132,21 +130,16 @@ public class OrderService {
         }
         return "Zlecenie z id " + orderId + " nie istnieje!";
     }
-    public CompletationOrder getOrder(int orderId) {
-        Optional<CompletationOrder> order = orderRepository.findById(orderId);
-        return order.orElse(null);
-    }
     public List<CompletationOrderDTO> getCompletationOrders(){
-        return orderRepository.findAll().stream().map(CompletationOrder::toDTO).collect(Collectors.toList());
+        return orders.values().stream().map(CompletationOrder::toDTO).collect(Collectors.toList());
     }
     public void checkOrderCompleted(CompleteLineDTO completeLineDTO) throws RuntimeException{
-        Optional<CompletationOrder> orderFromDB = orderRepository.findById(completeLineDTO.getOrderId());
+        CompletationOrder order = orders.get(completeLineDTO.getOrderId());
 
-        if (orderFromDB.isEmpty()) {
+        if (order == null) {
             logger.info("Cannot complete order {}, does not exist", completeLineDTO.getOrderId());
             throw new RuntimeException("Order not exist");
         }
-        CompletationOrder order = orderFromDB.get();
         boolean allLinesComplete = order.getCarriers().stream()
                 .flatMap(carrier -> carrier.getLines().stream())
                 .allMatch(line -> line.getQuantityToComplete() == 0);
@@ -162,12 +155,12 @@ public class OrderService {
 
     public String addOrder(CompletationOrderDTO completationOrderDTO) {
         Optional<CompletationOrder> order = orderRepository.findById(completationOrderDTO.getId());
-        Destination destination = destinationService.getDestination(completationOrderDTO.getDestinationId());
+        Destination destination = destinationService.getDestinationById(completationOrderDTO.getDestinationId());
         if (destination == null) {
             logger.info("Cannot create order with null destination!");
             return "Destynacja o podanym id " + completationOrderDTO.getDestinationId() + " nie istnieje!";
         }
-        AppUser user = appUserService.getAppUser(completationOrderDTO.getUserId());
+        AppUser user = appUserService.getAppUserById(completationOrderDTO.getUserId());
         if (user == null) {
             logger.info("Cannot create order with null user!");
             return "Użytkownik o podanym id " + completationOrderDTO.getUserId() + " nie istnieje!";
@@ -209,15 +202,19 @@ public class OrderService {
     }
 
     public String removeOrder(int id) {
-//        CompletationOrder orderToRemove = orders.get(id);
-//        if (orderToRemove == null) {
-//            logger.info("Cannot remove order with id {}, does not exist", id);
-//            return "Zlecenie z id " + id + " nie istnieje";
-//        }
+        CompletationOrder orderToRemove = orders.get(id);
+        if (orderToRemove == null) {
+            logger.info("Cannot remove order with id {}, does not exist", id);
+            return "Zlecenie z id " + id + " nie istnieje";
+        }
+        if (!orderToRemove.getCarriers().isEmpty()) {
+            logger.info("Cannot remove order {} with carriers!", orderToRemove);
+            return "Zlecenie posiada zaplanowane pojemniki!";
+        }
         QueryTimer timer = new QueryTimer();
         try {
             orderRepository.deleteById(id);
-//            orders.remove(orderToRemove.getId());
+            orders.remove(orderToRemove.getId());
             logger.info("Order {} removed from database, executed {}", id, timer);
             return "OK";
         } catch (Exception exception) {
@@ -227,8 +224,8 @@ public class OrderService {
     }
 
     public void addOrderToMap(CompletationOrder order) {
-//        if (order != null && order.getId() != null) {
-//            orders.put(order.getId(), order);
-//        }
+        if (order != null && order.getId() != null) {
+            orders.put(order.getId(), order);
+        }
     }
 }

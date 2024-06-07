@@ -44,13 +44,11 @@ public class PickingGUI2WMPHSController {
 
     @GetMapping("/getReleasedOrder/{userId}")
     public CompletationOrderDTO getReleasedOrder(@PathVariable int userId) throws ExecutionException, InterruptedException {
-        logger.info("Proceeding GET request /getReleasedOrder/{}", userId);
         return scheduler.submitTask(()->orderService.getReleasedOrderForUser(userId)).get();
     }
 
     @GetMapping("/getCarriersToCompletation/{orderId}")
     public List<CarrierDTO> getCarriers(@PathVariable int orderId) throws ExecutionException, InterruptedException {
-        logger.info("Proceeding GET request /getCarriersToCompletation/{}", orderId);
         return scheduler.submitTask(()->orderService.getCarriersToCompletation(orderId)).get();
     }
     @PostMapping("/setCarrierBarcode/{carrierId}/{barcode}")

@@ -1,7 +1,6 @@
 package com.s20683.wmphs.destination;
 
 import com.s20683.wmphs.gui2wmphs.request.DestinationDTO;
-import com.s20683.wmphs.product.Product;
 import com.s20683.wmphs.tools.QueryTimer;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -62,7 +61,6 @@ public class DestinationService {
             destination.setTarget(destinationDTO.getTarget());
             destinationRepository.save(destination);
             logger.info("Destination {} updated on database, executed in {}", destination, timer);
-            destinations.put(destination.getId(), destination);
             return "OK";
         }
     }
@@ -86,7 +84,7 @@ public class DestinationService {
     public List<DestinationDTO> getDestinations() {
         return destinations.values().stream().map(Destination::toDTO).collect(Collectors.toList());
     }
-    public Destination getDestination(int destinationId){
+    public Destination getDestinationById(int destinationId){
         return destinations.get(destinationId);
     }
 

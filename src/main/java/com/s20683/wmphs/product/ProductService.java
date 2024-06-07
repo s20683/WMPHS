@@ -60,6 +60,9 @@ public class ProductService {
     public List<ProductDTO> getProducts(){
         return products.values().stream().map(Product::toDTO).collect(Collectors.toList());
     }
+    public Product getProductById(int id) {
+        return products.get(id);
+    }
 
     public String addProduct(ProductDTO productDTO) {
         Product product = products.get(productDTO.getId());

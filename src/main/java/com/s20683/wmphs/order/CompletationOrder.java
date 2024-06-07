@@ -27,22 +27,28 @@ public class CompletationOrder {
     @Column(nullable = false)
     private Integer state;
 
-    @ManyToOne
-    @JoinColumn(name = "destination_id", nullable = false)
+    @Column(name = "destination_id", nullable = false)
+    private Integer destinationId;
+
+    @Transient
     private Destination destination;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
+
+    @Transient
     private AppUser user;
 
-    @OneToMany(mappedBy = "completationOrder", fetch = FetchType.EAGER)
+    @Transient
     private List<Carrier> carriers = new ArrayList<>();
 
     public CompletationOrder(Integer carrierVolume, Integer state, Destination destination, AppUser user) {
         this.carrierVolume = carrierVolume;
         this.state = state;
         this.destination = destination;
+        this.destinationId = destination.getId();
         this.user = user;
+        this.userId = user.getId();
     }
     public void addCarrier(Carrier carrier) {
         if (carrier != null)
@@ -54,5 +60,29 @@ public class CompletationOrder {
 
     public CompletationOrderDTO toDTO(){
         return new CompletationOrderDTO(id, carrierVolume, state, destination.getId(), destination.getName(), user.getId(), user.getName());
+    }
+
+    public void setDestination(Destination destination) {
+        this.destination = destination;
+        this.destinationId = destination.getId();
+    }
+
+    public void setUser(AppUser user) {
+        this.user = user;
+        this.userId = user.getId();
+    }
+
+    @Override
+    public String toString() {
+        return "CompletationOrder{" +
+                "id=" + id +
+                ", carrierVolume=" + carrierVolume +
+                ", state=" + state +
+                ", destinationId=" + destinationId +
+                ", destination=" + destination +
+                ", userId=" + userId +
+                ", user=" + user +
+                ", carriers=" + carriers +
+                '}';
     }
 }
