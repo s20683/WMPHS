@@ -3,7 +3,6 @@ package com.s20683.wmphs.product;
 import com.s20683.wmphs.gui2wmphs.request.ProductDTO;
 import com.s20683.wmphs.tools.QueryTimer;
 import jakarta.annotation.PostConstruct;
-import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

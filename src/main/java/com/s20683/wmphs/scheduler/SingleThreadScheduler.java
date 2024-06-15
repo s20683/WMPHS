@@ -3,7 +3,6 @@ package com.s20683.wmphs.scheduler;
 import com.s20683.wmphs.gui2wmphs.request.SimpleResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;

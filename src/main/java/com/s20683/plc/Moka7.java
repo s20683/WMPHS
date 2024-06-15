@@ -73,7 +73,6 @@ public class Moka7 implements Runnable{
         logger.info("PLC Thread started!");
         try {
             while (true) {
-                //todo dodac oczekiwanie na inicializacje
                 while (true) {
                     try {
                         while (! connect())

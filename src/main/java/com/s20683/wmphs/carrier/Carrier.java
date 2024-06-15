@@ -26,6 +26,9 @@ public class Carrier {
     @Column(nullable = false)
     private Integer volume;
 
+    @Column(nullable = false)
+    private Boolean sorted = true;
+
     @Column(name = "completation_order_id", nullable = false)
     private Integer orderId;
     @Transient

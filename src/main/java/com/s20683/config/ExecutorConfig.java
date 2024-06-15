@@ -1,6 +1,7 @@
 package com.s20683.config;
 
 import com.s20683.wmphs.scheduler.NamedSingleThreadFactory;
+import com.s20683.wmphs.scheduler.SingleThreadScheduler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

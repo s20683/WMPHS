@@ -1,7 +1,6 @@
 package com.s20683.wmphs.stock;
 
 import com.s20683.wmphs.gui2wmphs.request.CompressedStockDTO;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

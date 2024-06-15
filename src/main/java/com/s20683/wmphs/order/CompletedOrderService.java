@@ -4,7 +4,6 @@ import com.s20683.wmphs.gui2wmphs.request.CompleteLineDTO;
 import com.s20683.wmphs.line.Line;
 import com.s20683.wmphs.line.LineService;
 import com.s20683.wmphs.stock.AllocatedStockService;
-import com.s20683.wmphs.stock.StockService;
 import com.s20683.wmphs.tools.QueryTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

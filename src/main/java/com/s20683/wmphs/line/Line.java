@@ -5,7 +5,6 @@ import com.s20683.wmphs.gui2wmphs.request.LineDTO;
 import com.s20683.wmphs.product.Product;
 import com.s20683.wmphs.stock.AllocatedStock;
 import jakarta.persistence.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -41,7 +40,6 @@ public class Line {
     @Transient
     private Carrier carrier;
 
-//    @OneToMany(mappedBy = "line", fetch = FetchType.EAGER)
     @Transient
     private List<AllocatedStock> allocatedStocks = new ArrayList<>();
 

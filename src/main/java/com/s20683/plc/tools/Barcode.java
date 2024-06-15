@@ -29,8 +29,8 @@ public class Barcode {
             throw new IllegalArgumentException("Null barcode string");
         if (code.length() < 3)
             throw new IllegalArgumentException("Code128 barcode string too short, len = " + code.length());
-        if (code.startsWith("]C0"))
-            throw new IllegalArgumentException("Illegal Code128 prefix “" + code);
+        if (!code.startsWith("]C0"))
+            throw new IllegalArgumentException("Illegal Code128 prefix " + code);
         String type = "Code128";
 
         return new Barcode(code.substring(3), type);

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
@@ -48,6 +49,20 @@ public class LineService {
     public Line getLineById(int id) {
         return lines.get(id);
     }
+    @Transactional
+    public void deleteLines(List<Line> linesRemove) {
+        List<Line> linesToRemove = new ArrayList<>();
+        for (Line line : lines.values()) {
+            for (Line lineToRemove : linesRemove) {
+                if (Objects.equals(line.getId(), lineToRemove.getId())) {
+                    linesToRemove.add(line);
+                }
+            }
+        }
+        for (Line line : linesToRemove) {
+            deleteLine(line.getId());
+        }
+    }
     public String deleteLine(int id) {
         Line lineToRemove = lines.get(id);
         if (lineToRemove == null) {
@@ -74,73 +89,4 @@ public class LineService {
         if (line != null)
             lines.put(line.getId(), line);
     }
-
-//    @Transactional
-//    public String removeLine(int id) {
-//        Line line = lines.get(id);
-//        if (line != null) {
-//            try {
-//                QueryTimer timer = new QueryTimer();
-//
-//                stockService.unallocateStock(line);
-//                lineRepository.deleteById(id);
-//                logger.info("Removed line and updated stock {} on database, executed {}", id, timer);
-////            line.getCarrier().removeLine(line);
-////            lines.remove(line.getId());
-//                return "OK";
-//
-//
-//            } catch (Exception exception) {
-//                logger.warn("Exception while remove line {}", id, exception);
-//                return "Błąd podczas usuwania linii: " + exception.getMessage();
-//            }
-//        }
-//        logger.info("Line with id {} does not exist, cannot delete from database", id);
-//        return "Linia o podanym id " + id +  " nie istnieje!";
-//    }
-
-//    public String addLine(LineDTO lineDTO) {
-//        Line line = lines.get(lineDTO.getId());
-//        Product product = productService.getProduct(lineDTO.getProductId());
-//        if (product == null) {
-//            logger.info("Cannot create line with null product!");
-//            return "Produkt o podanym id " + lineDTO.getProductId() + " nie istnieje!";
-//        }
-//        Carrier carrier = carrierService.getCarrier(lineDTO.getCarrierId());
-//        if (carrier == null) {
-//            logger.info("Cannot create line with null carrier!");
-//            return "Pojemnik o podanym id " + lineDTO.getCarrierId() + " nie istnieje!";
-//        }
-//
-//        if (line == null) {
-//            QueryTimer timer = new QueryTimer();
-//            line = lineRepository.save(
-//                    new Line(lineDTO.getQuantity(),
-//                            lineDTO.getQuantityCompleted(),
-//                            product,
-//                            carrier
-//                    ));
-//            if (line.getId() != null) {
-//                logger.info("Line {} saved to database, executed in {}", line, timer);
-//                lines.put(line.getId(), line);
-//                return "OK";
-//            } else {
-//                logger.warn("Error while saving line {} to database", lineDTO);
-//                return "Linia kompletacyja nie istnieje ale powstał problem podczas zapisu do bazy.";
-//            }
-//        } else {
-//            QueryTimer timer = new QueryTimer();
-//            line.setQuantity(lineDTO.getQuantity());
-//            line.setQuantityCompleted(lineDTO.getQuantityCompleted());
-//            line.setCarrier(carrier);
-//            line.setProduct(product);
-//            logger.info("Line {} updated on database, executed in {}", line, timer);
-//            lines.put(line.getId(), line);
-//            return "OK";
-//        }
-//    }
-
-
-
-
 }

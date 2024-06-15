@@ -53,6 +53,13 @@ public class OrderService {
         logger.info("Find All operation for Orders executed on {}", timer);
     }
 
+    public void checkCarriersSorted(CompletationOrder order) {
+        boolean allCarriersSorted = order.getCarriers().stream().allMatch(Carrier::getSorted);
+        if (allCarriersSorted) {
+            order.setState(OrderState.SORTED.getValue());
+            orderRepository.save(order);
+        }
+    }
     public CompletationOrder getOrderById(int id) {
         return orders.get(id);
     }
@@ -64,7 +71,6 @@ public class OrderService {
             return new ArrayList<>();
         }
         List<Carrier> carriers = order.getCarriers();
-        logger.info("Received carriers {}", carriers);
         carriers = carriers.stream()
                 .filter(carrier -> carrier.getLines().stream()
                         .anyMatch(line -> line.getQuantityToComplete() != 0))
@@ -151,54 +157,6 @@ public class OrderService {
         } else {
             logger.info("Order has incompleted lines!");
         }
-    }
-
-    public String addOrder(CompletationOrderDTO completationOrderDTO) {
-        Optional<CompletationOrder> order = orderRepository.findById(completationOrderDTO.getId());
-        Destination destination = destinationService.getDestinationById(completationOrderDTO.getDestinationId());
-        if (destination == null) {
-            logger.info("Cannot create order with null destination!");
-            return "Destynacja o podanym id " + completationOrderDTO.getDestinationId() + " nie istnieje!";
-        }
-        AppUser user = appUserService.getAppUserById(completationOrderDTO.getUserId());
-        if (user == null) {
-            logger.info("Cannot create order with null user!");
-            return "Użytkownik o podanym id " + completationOrderDTO.getUserId() + " nie istnieje!";
-        }
-
-//        if (order.isPresent()) {
-        QueryTimer timer = new QueryTimer();
-        CompletationOrder orderFromDb = orderRepository.save(
-                new CompletationOrder(
-                        completationOrderDTO.getCarrierVolume(),
-                        completationOrderDTO.getState(),
-                        destination,
-                        user
-                )
-        );
-        if (order.isEmpty()) {
-            if (orderFromDb.getId() != null) {
-                logger.info("Order {} saved to database, executed in {}", order, timer);
-            } else {
-                logger.warn("Error while saving order {} to database", completationOrderDTO);
-                return "Zlecenie nie istnieje ale podczas dodawnia do bazy powstał błąd!";
-            }
-//                orders.put(order.getId(), order);
-            return "OK";
-        } else {
-            logger.info("Order {} updated on database, executed in {}", order, timer);
-            return "OK";
-        }
-//        } else {
-//            QueryTimer timer = new QueryTimer();
-//            order.setCarrierVolume(completationOrderDTO.getCarrierVolume());
-//            order.setState(completationOrderDTO.getState());
-//            order.setDestination(destination);
-//            order.setUser(user);
-//            logger.info("Order {} updated on database, executed in {}", order, timer);
-//            orders.put(order.getId(), order);
-//            return "OK";
-//        }
     }
 
     public String removeOrder(int id) {

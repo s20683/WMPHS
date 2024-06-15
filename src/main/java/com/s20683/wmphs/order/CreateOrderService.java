@@ -24,10 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class CreateOrderService {
@@ -161,5 +158,50 @@ public class CreateOrderService {
             logger.warn("Error while saving order {} to database", order);
             throw new RuntimeException("Zlecenie nie istnieje ale podczas dodawnia do bazy powstał błąd!");
         }
+    }
+
+    @Transactional
+    public String setCarrierBarcode(int carrierId, String barcode) {
+        try {
+            Carrier carrier = carrierService.getCarrierById(carrierId);
+            Optional<Carrier> carrierInUse = carrierService.getCarriers().stream().filter(e->{
+                logger.info("Filtering new {} inlist {}", barcode, e.getBarcode());
+                return e.getBarcode().equals(barcode);
+            }).findFirst();
+            logger.info("Carrier in use {}", carrierInUse);
+            if (carrierInUse.isPresent()) {
+                logger.info("Find carrier in use {}", carrierInUse.get());
+                if (carrierInUse.get().getCompletationOrder().getState() != OrderState.SORTED.getValue()) {
+                    logger.info("Cannot use carrier {}, is in use on not sorted order", carrierInUse.get());
+                    return "Pojemnik ma nierozsortowane zlecenie!";
+                }
+                if (!carrierInUse.get().getSorted()) {
+                    logger.info("Cannot use barcode {}, is in use", barcode);
+                    return "Pojemnik jest już w użyciu!";
+                } else  {
+                    logger.info("Trying to use barcode {} again, removing order {} from db, to next using", barcode, carrier.getCompletationOrder());
+                    CompletationOrder order = orderService.getOrderById(carrierInUse.get().getOrderId());
+                    List<Carrier> carriers = order.getCarriers();
+                    carriers.forEach(e->{
+                        lineService.deleteLines(e.getLines());
+                    });
+                    carrierService.removeCarriers(carriers);
+                    orderService.removeOrder(order.getId());
+                    logger.info("Successfully all components of order {}!", order);
+                }
+            }
+            if (carrier != null) {
+                carrier.setBarcode(barcode);
+                carrier.setSorted(false);
+                QueryTimer timer = new QueryTimer();
+                carrierRepository.save(carrier);
+                logger.info("Set barcode {} to carrier {}, executed in {}", barcode, carrier, timer);
+                return "OK";
+            }
+        } catch (Exception exception) {
+            throw new RuntimeException(exception.getMessage());
+        }
+        logger.info("Carrier with id {} does not exist!", carrierId);
+        return "Pojemnik o id " + carrierId + " nie istnieje!";
     }
 }

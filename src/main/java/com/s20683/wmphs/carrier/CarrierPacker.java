@@ -1,12 +1,8 @@
 package com.s20683.wmphs.carrier;
 
 import com.s20683.wmphs.line.Line;
-import com.s20683.wmphs.line.LineRepository;
-import com.s20683.wmphs.line.LineService;
 import com.s20683.wmphs.order.CompletationOrder;
 import com.s20683.wmphs.product.Product;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

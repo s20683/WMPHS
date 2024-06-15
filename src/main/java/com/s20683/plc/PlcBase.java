@@ -33,9 +33,6 @@ public class PlcBase extends Moka7{
         this.readBufLen = getReadBufferLength();
         this.readBuf = new byte[this.readBufLen];
         extraReadWords = new int[readAreaLength];
-
-
-
     }
 
     public void registerCamera(CameraBase camera){
@@ -65,7 +62,6 @@ public class PlcBase extends Moka7{
         readArea(slotsReadBase, readBufLen, readBuf);
     }
     protected int getReadBufferLength() {
-//        return (slotsCount+readAreaLength)*2;
-        return 1024;
+        return (slotsCount+readAreaLength)*2;
     }
 }

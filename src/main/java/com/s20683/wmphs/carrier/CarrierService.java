@@ -1,10 +1,15 @@
 package com.s20683.wmphs.carrier;
 
+import com.s20683.plc.Report;
+import com.s20683.plc.tools.TrackId;
+import com.s20683.wmphs.destination.Destination;
 import com.s20683.wmphs.gui2wmphs.request.LineDTO;
 import com.s20683.wmphs.line.Line;
 import com.s20683.wmphs.order.CompletationOrder;
 import com.s20683.wmphs.order.OrderService;
+import com.s20683.wmphs.order.OrderState;
 import com.s20683.wmphs.tools.QueryTimer;
+import com.s20683.wmphs.tools.Result;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
+import java.util.function.Consumer;
 
 
 @Service
@@ -19,6 +25,7 @@ public class CarrierService {
     protected final Logger logger = LoggerFactory.getLogger(CarrierService.class);
     private final CarrierRepository carrierRepository;
     private final Map<Integer, Carrier> carriers = new HashMap<>();
+    private final Map<Short, Carrier> carrierByTID = new HashMap<>();
 
     @Autowired
     private final OrderService orderService;
@@ -48,24 +55,72 @@ public class CarrierService {
     public Carrier getCarrier(int carrierId) {
         return carriers.get(carrierId);
     }
-    @Transactional
-    public String setCarrierBarcode(int carrierId, String barcode) {
-        try {
-            Carrier carrier = carriers.get(carrierId);
-            if (carrier != null) {
-                carrier.setBarcode(barcode);
-                QueryTimer timer = new QueryTimer();
-                carrierRepository.save(carrier);
-                logger.info("Set barcode {} to carrier {}, executed in {}", barcode, carrier, timer);
-                return "OK";
-            }
-        } catch (Exception exception) {
-            throw new RuntimeException(exception.getMessage());
-        }
-        logger.info("Carrier with id {} does not exist!", carrierId);
-        return "Pojemnik o id " + carrierId + " nie istnieje!";
+    public List<Carrier> getCarriers() {
+        return carriers.values().stream().toList();
     }
 
+
+    public void getCarrierDestination(TrackId trackId, String barcode, Consumer<Result<Destination>> proceeder) {
+        Optional<Carrier> carrierFromMap = carriers.values().stream().filter(e->e.getBarcode().equals(barcode)).findFirst();
+        if (carrierFromMap.isEmpty()) {
+            logger.info("Carrier with barcode {} does not exist! => REJECT", barcode);
+            proceeder.accept(Result.createFail(new NoSuchElementException("Carrier does not exist!")));
+            return;
+        }
+        Carrier carrier = carrierFromMap.get();
+        CompletationOrder order = carrier.getCompletationOrder();
+        if (order == null) {
+            logger.info("Order with carrier {} does not exist! => REJECT", barcode);
+            proceeder.accept(Result.createFail(new NoSuchElementException("Carrier has no order!")));
+            return;
+        }
+        if (order.getState() != OrderState.COMPLETED.getValue()) {
+            logger.info("Order is not completed {} => REJECT", order);
+            proceeder.accept(Result.createFail(new IllegalStateException("Order is not completed")));
+            return;
+        }
+        Destination destination = order.getDestination();
+        if (destination == null) {
+            logger.info("Carrier {} has no destination! => REJECT", barcode);
+            proceeder.accept(Result.createFail(new NoSuchElementException("Carrier has no destination")));
+            return;
+        }
+        logger.info("Carrier {} => OK [{}]", barcode, destination.getTarget());
+        carrierByTID.put(trackId.getTrackId(), carrier);
+        proceeder.accept(Result.createSuccess(destination));
+    }
+    @Transactional
+    public void reportCarrier(Report report) {
+        Carrier carrier = carrierByTID.get(report.getReportTrackId().getTrackId());
+        if (carrier == null) {
+            logger.info("Carrier with tid {} does not exist!", report.getReportTrackId().getTrackId());
+            return;
+        }
+        if (carrier.getCompletationOrder().getDestination().getTarget() == report.getReport()) {
+            logger.info("Reported target is OK!");
+            carrier.setSorted(true);
+            carrierByTID.remove(report.getReportTrackId().getTrackId());
+            carrierRepository.save(carrier);
+            orderService.checkCarriersSorted(carrier.getCompletationOrder());
+        } else {
+            logger.info("Wrong report target: reported {} != required {}", report.getReport(), carrier.getCompletationOrder().getDestination().getTarget());
+        }
+    }
+
+    @Transactional
+    public void removeCarriers(List<Carrier> carriersRemove) {
+        List<Carrier> carriersToRemove = new ArrayList<>();
+        for (Carrier carrier : carriers.values()) {
+            for (Carrier carrierToRemove : carriersRemove) {
+                if (carrier.getId().equals(carrierToRemove.getId())) {
+                    carriersToRemove.add(carrier);
+                }
+            }
+        }
+        for (Carrier carrier : carriersToRemove) {
+            removeCarrier(carrier.getId());
+        }
+    }
     @Transactional
     public String removeCarrier(int carrierId) {
         Carrier carrier = carriers.get(carrierId);
