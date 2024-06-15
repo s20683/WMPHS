@@ -51,9 +51,6 @@ public class CameraBase implements MokaCamera{
     }
 
     public void handleCamera(MokaOperation readArea, MokaOperation writeArea){
-        byte[] buffer33 = new byte[100];
-        readArea.handle(0, 100, buffer33);
-        logger.info("Receive buffer {}", Arrays.toString(buffer33));
         byte[] trackIdRow = new byte[2];
         readArea.handle(db_id * 2, 2, trackIdRow);
         short trackIdValue = ByteBuffer.wrap(trackIdRow).getShort();
@@ -72,7 +69,6 @@ public class CameraBase implements MokaCamera{
                 setTrackId(new TrackId(trackIdValue), true);
             }
         }
-        logger.info("Received decision REQ TID {} last TID {}", trackIdValue, this.decision.getTrackId().getTrackId());
 
         if (trackIdValue != this.decision.getTrackId().getTrackId()) {
             byte[] decision = new byte[2];
@@ -94,7 +90,6 @@ public class CameraBase implements MokaCamera{
         readArea.handle(this.report.getReportTrackIdSlot(), 2, currentReportTrackIdRow);
         readArea.handle(this.report.getReportSlot(), 2, receivedValue);
         short currentReportTrackId = ByteBuffer.wrap(currentReportTrackIdRow).getShort();
-        logger.info("Received TID {} last TID {}", currentReportTrackId, this.report.getReportTrackId().getTrackId());
         if (currentReportTrackId != this.report.getReportTrackId().getTrackId()) {
             short reportValue = ByteBuffer.wrap(receivedValue).getShort();
             logger.warn("Setting report {} for trackId {}", reportValue, currentReportTrackId);
