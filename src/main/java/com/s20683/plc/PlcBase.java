@@ -1,38 +1,28 @@
 package com.s20683.plc;
 
-
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class PlcBase extends Moka7{
 
     private int slotsReadBase;
     private int slotsCount;
     private int readAreaLength;
-    private int writeAreaBase;
-    private int writeAreaLen;
-    private final byte[] slotsWriteBuf;
-    private final MokaSlotClient[] slots;
-    private final int readBufLen;
-    protected final byte[] readBuf;
-    protected final int[] extraReadWords;
+    private int readBufLen;
+    protected byte[] readBuf;
     private List<CameraBase> cameras = new ArrayList<>();
 
-    public PlcBase(int slotsReadBase, int slotsCount, int readAreaLength, int writeAreaBase, int writeAreaLen) {
+    public PlcBase(int slotsReadBase, int slotsCount, int readAreaLength) {
         super();
 
         this.slotsReadBase = slotsReadBase;
         this.slotsCount = slotsCount;
         this.readAreaLength = readAreaLength;
-        this.writeAreaBase = writeAreaBase;
-        this.writeAreaLen = writeAreaLen;
-
-        this.slots = new MokaSlotClient[slotsCount];
-        this.slotsWriteBuf = new byte[2*slotsCount];
+    }
+    @Override
+    public void init() {
         this.readBufLen = getReadBufferLength();
         this.readBuf = new byte[this.readBufLen];
-        extraReadWords = new int[readAreaLength];
     }
 
     public void registerCamera(CameraBase camera){
@@ -41,13 +31,6 @@ public class PlcBase extends Moka7{
     @Override
     protected void onConnected() {
         super.onConnected();
-        readArea(this.writeAreaBase, 2*this.slotsCount, this.slotsWriteBuf);
-        for (int i=0; i < slotsCount; ++i) {
-            MokaSlotClient slot = slots[i];
-            if (slot == null)
-                continue;
-//            slot.onPlcConnected(new TrackId(slotsWriteBuf, 2*i));
-        }
     }
 
     @Override
@@ -55,13 +38,19 @@ public class PlcBase extends Moka7{
         super.onRunLoop();
         read();
         for (CameraBase camera : cameras) {
-            camera.handleCamera(this::readArea, this::writeArea);
+            camera.handleCamera(this::readSpecificData, this::writeArea);
         }
     }
-    private final void read() {
+    public void readSpecificData(int base, int len, byte[] buffer) {
+        if (base < 0 || len < 0 || base + len > readBuf.length) {
+            throw new IllegalArgumentException("Invalid base or length");
+        }
+        System.arraycopy(readBuf, base, buffer, 0, len);
+    }
+    private void read() {
         readArea(slotsReadBase, readBufLen, readBuf);
     }
     protected int getReadBufferLength() {
-        return (slotsCount+readAreaLength)*2;
+        return (slotsCount+readAreaLength)*2 + (32 * cameras.size());
     }
 }

@@ -29,7 +29,7 @@ public class PLCInitializer {
 
     @PostConstruct
     public void init(){
-        PlcBase plcBase = new PlcBase(0, 3, 2, 42, 2);
+        PlcBase plcBase = new PlcBase(0, 3, 2);
         plcBase.setAddress(host);
         plcBase.setdBNo(400);
 

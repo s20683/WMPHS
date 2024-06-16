@@ -74,6 +74,11 @@ public class CarrierService {
             proceeder.accept(Result.createFail(new NoSuchElementException("Carrier has no order!")));
             return;
         }
+        if (order.getState() == OrderState.SORTED.getValue()) {
+            logger.info("All carriers of this order are sorted {} => REJECT", order);
+            proceeder.accept(Result.createFail(new IllegalStateException("All carriers of this order is sorted")));
+            return;
+        }
         if (order.getState() != OrderState.COMPLETED.getValue()) {
             logger.info("Order is not completed {} => REJECT", order);
             proceeder.accept(Result.createFail(new IllegalStateException("Order is not completed")));

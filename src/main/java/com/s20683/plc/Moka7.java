@@ -46,6 +46,7 @@ public class Moka7 implements Runnable{
             throw new IllegalStateException("PLC error on writeArea " + S7Client.ErrorText(status));
     }
 
+    public void init() {}
     public void readArea(int base, int len, byte[] buffer) {
         int status = connection.ReadArea(S7.S7AreaDB, dBNo, base, len, buffer);
         if (status != 0)
@@ -97,6 +98,7 @@ public class Moka7 implements Runnable{
         }
     }
     public void start() {
+        init();
         logger.info("Starting PLC thread {}", threadName);
         (new Thread(this, threadName)).start();
     }
