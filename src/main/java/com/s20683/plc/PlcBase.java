@@ -10,7 +10,7 @@ public class PlcBase extends Moka7{
     private int readAreaLength;
     private int readBufLen;
     protected byte[] readBuf;
-    private List<CameraBase> cameras = new ArrayList<>();
+    private List<MokaCamera> cameras = new ArrayList<>();
 
     public PlcBase(int slotsReadBase, int slotsCount, int readAreaLength) {
         super();
@@ -25,7 +25,7 @@ public class PlcBase extends Moka7{
         this.readBuf = new byte[this.readBufLen];
     }
 
-    public void registerCamera(CameraBase camera){
+    public void registerCamera(MokaCamera camera){
         cameras.add(camera);
     }
     @Override
@@ -37,7 +37,7 @@ public class PlcBase extends Moka7{
     protected void onRunLoop() {
         super.onRunLoop();
         read();
-        for (CameraBase camera : cameras) {
+        for (MokaCamera camera : cameras) {
             camera.handleCamera(this::readSpecificData, this::writeArea);
         }
     }

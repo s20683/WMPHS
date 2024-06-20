@@ -7,13 +7,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class Decision {
-    private int decisionSlot;
+    private int decisionValuePosition;
     private int trackIdSlot;
     private TrackId trackId;
     private short decision;
 
-    public Decision(int decisionSlot, int trackIdSlot) {
-        this.decisionSlot = decisionSlot;
+    public Decision(int decisionValuePosition, int trackIdSlot) {
+        this.decisionValuePosition = decisionValuePosition;
         this.trackIdSlot = trackIdSlot;
         this.trackId = new TrackId(0);
     }

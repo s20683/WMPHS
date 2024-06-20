@@ -10,9 +10,7 @@ public class Moka7 implements Runnable{
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     protected S7Client connection;
     private String address;
-    //todo co to rack
     private int rack = 0;
-    //todo slot1
     private int slot = 1;
     private int dBNo = 12;
     private boolean connectionOk = false;
@@ -65,10 +63,6 @@ public class Moka7 implements Runnable{
 
     }
     protected void onRunLoop(){}
-    public static int getWord(byte[] src, int offset) {
-        return ((src[offset] & 0xff) << 8) | (src[offset+1] & 0xff);
-    }
-
     @Override
     public void run() {
         logger.info("PLC Thread started!");

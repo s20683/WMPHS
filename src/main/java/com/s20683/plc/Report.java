@@ -5,13 +5,13 @@ import lombok.Data;
 
 @Data
 public class Report {
-    private int reportSlot;
+    private int reportValuePosition;
     private int reportTrackIdSlot;
     private TrackId reportTrackId;
     private short report;
 
-    public Report(int reportSlot, int reportTrackIdSlot) {
-        this.reportSlot = reportSlot;
+    public Report(int reportValuePosition, int reportTrackIdSlot) {
+        this.reportValuePosition = reportValuePosition;
         this.reportTrackIdSlot = reportTrackIdSlot;
         this.reportTrackId = new TrackId(0);
     }

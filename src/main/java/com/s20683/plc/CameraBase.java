@@ -26,14 +26,15 @@ public class CameraBase implements MokaCamera{
     private boolean initProceedBarcode = false;
     private boolean initProceedReport = false;
 
-    public CameraBase(String name, int db_id, Consumer<CameraBase> proceedBarcode, Consumer<Report> proceedReport) {
+    public CameraBase(String name, int db_id, Decision decision, Report report,
+                      Consumer<CameraBase> proceedBarcode, Consumer<Report> proceedReport) {
         this.name = name;
         this.db_id = db_id;
         this.proceedBarcode = proceedBarcode;
         this.proceedReport = proceedReport;
         this.trackId = new TrackId(0);
-        this.decision = new Decision(48, 44);
-        this.report = new Report(6, 4);
+        this.decision = decision;
+        this.report = report;
         this.logger = LoggerFactory.getLogger(getClass() + ":" + this.name);
     }
 
@@ -82,13 +83,13 @@ public class CameraBase implements MokaCamera{
             logger.warn("Setting decision {} for trackId {}", decisionValue, trackIdValue);
             this.decision.setDecision(decisionValue);
             this.decision.setTrackId(new TrackId(trackIdValue));
-            writeArea.handle(this.decision.getDecisionSlot(), 2, decision);
+            writeArea.handle(this.decision.getDecisionValuePosition(), 2, decision);
             writeArea.handle(this.decision.getTrackIdSlot(), 2, trackId);
         }
         byte[] currentReportTrackIdRow = new byte[2];
         byte[] receivedValue = new byte[2];
         readArea.handle(this.report.getReportTrackIdSlot(), 2, currentReportTrackIdRow);
-        readArea.handle(this.report.getReportSlot(), 2, receivedValue);
+        readArea.handle(this.report.getReportValuePosition(), 2, receivedValue);
         short currentReportTrackId = ByteBuffer.wrap(currentReportTrackIdRow).getShort();
         if (currentReportTrackId != this.report.getReportTrackId().getTrackId()) {
             short reportValue = ByteBuffer.wrap(receivedValue).getShort();

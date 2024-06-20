@@ -1,7 +1,9 @@
 package com.s20683.config;
 
 import com.s20683.plc.CameraBase;
+import com.s20683.plc.Decision;
 import com.s20683.plc.PlcBase;
+import com.s20683.plc.Report;
 import com.s20683.wmphs.carrier.CarrierService;
 import com.s20683.wmphs.scheduler.SingleThreadScheduler;
 import jakarta.annotation.PostConstruct;
@@ -34,6 +36,8 @@ public class PLCInitializer {
         plcBase.setdBNo(400);
 
         CameraBase SK10 = new CameraBase("SK10", 1,
+                new Decision(48, 44),
+                new Report(6, 4),
                 (camera)->{
                     logger.info("Proceeding barcode {}", camera.getBarcode());
                     carrierService.getCarrierDestination(camera.getTrackId(), camera.getBarcode().getCode(),
